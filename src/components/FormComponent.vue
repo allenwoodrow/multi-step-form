@@ -77,7 +77,7 @@
               <div class="form-group">
                 <label for="cardNumber">Card Number</label>
                 <input type="text" id="cardNumber" v-model="cardData.cardNumber" required @input="formatCardNumber">
-                <small class="danger" v-if="cv$.cardNumber.$error"> {{ pv$.cardNumber.$errors[0].$message }}</small>
+                <small class="danger" v-if="cv$.cardNumber.$error"> {{ cv$.cardNumber.$errors[0].$message }}</small>
               </div>
               <div class="form-group">
                 <label for="cvv">CVV</label>
@@ -125,7 +125,7 @@
   import axios from 'axios';
   import { defineComponent, ref, reactive, computed, onMounted } from 'vue'
   import { useVuelidate } from '@vuelidate/core'
-  import { required, minLength, email, numeric } from '@vuelidate/validators'
+  import { required, minLength, email, numeric, helpers } from '@vuelidate/validators'
   import { useGlobalLoader } from 'vue-global-loader'
 
   // interface
@@ -169,10 +169,35 @@
         }
       })
 
+      const validCard = helpers.withMessage('Invalid Card', 
+        (value) => {
+        if (/[^0-9-\s]+/.test(value)) return false;
+
+        var nCheck = 0
+        var nDigit = 0
+        var bEven = false;
+        value = value.replace(/\D/g, "");
+
+        for (var n = value.length - 1; n >= 0; n--) {
+            var cDigit = value.charAt(n),
+                // eslint-disable-next-line no-redeclare
+                nDigit = parseInt(cDigit, 10);
+
+            if (bEven) {
+                if ((nDigit *= 2) > 9) nDigit -= 9;
+            }
+
+            nCheck += nDigit;
+            bEven = !bEven;
+        }
+
+        return (nCheck % 10) == 0;
+      })
+
       const cardRules = computed(() => {
         return {
           ssn : { required },
-          cardNumber: { required, minLength: minLength(12)},
+          cardNumber: { required, minLength: minLength(12), validCard },
           cvv: { required, numeric },
           expiryDate: { required }
         }
